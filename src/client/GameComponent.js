@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, LinearProgress, ButtonGroup } from '@mui/material';
 
+// Array di colori per le squadre
+const TEAM_COLORS = ['#2196f3', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#795548'];
+
 function GameComponent({ gameState, setGameState, gameSettings }) {
   const [timeLeft, setTimeLeft] = useState(gameSettings.timePerQuestion);
   const [answerType, setAnswerType] = useState(null);
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [timerStarted, setTimerStarted] = useState(false);
-  const [scores, setScores] = useState({
-    team1: 0,
-    team2: 0
-  });
+  const [readyTeams, setReadyTeams] = useState(new Set());
+  const [scores, setScores] = useState(
+    Object.fromEntries(
+      Array.from({length: gameSettings.players}, (_, i) => [`team${i+1}`, 0])
+    )
+  );
+
+  // Calcola quale squadra ha il turno corrente
+  const currentTeam = gameState.currentQuestion % gameSettings.players + 1;
 
   useEffect(() => {
     const currentQ = gameState.questions[gameState.currentQuestion];
@@ -33,6 +41,15 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
   const handleAnswerTypeSelect = (type) => {
     setAnswerType(type);
     setTimerStarted(true);
+    // Non resettiamo più readyTeams qui
+  };
+
+  const handleTeamReady = (teamNumber) => {
+    setReadyTeams(prev => {
+      const newReadyTeams = new Set(prev);
+      newReadyTeams.add(teamNumber);
+      return newReadyTeams;
+    });
   };
 
   const handleTeamAnswer = (team) => {
@@ -48,11 +65,9 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
   const handleCarréAnswer = (answer) => {
     setGameState({ ...gameState, showAnswer: true });
     if (answer === currentQ.answer) {
-      // In modalità carré, il punto va alla squadra che ha il turno
-      const currentTeam = gameState.currentQuestion % 2 === 0 ? 'team1' : 'team2';
       setScores(prev => ({
         ...prev,
-        [currentTeam]: prev[currentTeam] + 1
+        [`team${currentTeam}`]: prev[`team${currentTeam}`] + 1
       }));
     }
   };
@@ -67,6 +82,7 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
       setTimeLeft(gameSettings.timePerQuestion);
       setAnswerType(null);
       setTimerStarted(false);
+      setReadyTeams(new Set()); // Resettiamo readyTeams solo qui
     } else {
       setGameState({
         ...gameState,
@@ -88,6 +104,8 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
     );
   }
 
+  const allTeamsReady = readyTeams.size === gameSettings.players;
+
   return (
     <Box sx={{ mt: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -95,9 +113,18 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
           Domanda {gameState.currentQuestion + 1}/{gameSettings.questionsPerRound}
         </Typography>
         <Typography variant="h5">
-          Punteggio: Squadra 1: {scores.team1} - Squadra 2: {scores.team2}
+          {Object.entries(scores).map(([team, score], index) => (
+            <span key={team}>
+              {index > 0 && ' - '}
+              Squadra {team.replace('team', '')}: {score}
+            </span>
+          ))}
         </Typography>
       </Box>
+
+      <Typography variant="subtitle1" gutterBottom color="primary">
+        Turno: Squadra {currentTeam}
+      </Typography>
 
       {timerStarted && (
         <LinearProgress 
@@ -111,7 +138,7 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
         {currentQ.question}
       </Typography>
 
-      {!gameState.showAnswer && (
+      {!gameState.showAnswer && !answerType && (
         <Box sx={{ mb: 2 }}>
           <Button 
             variant={answerType === 'carré' ? 'contained' : 'outlined'}
@@ -130,21 +157,89 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
       )}
 
       {!gameState.showAnswer && answerType === 'carré' && (
-        <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-          {shuffledAnswers.map((answer, index) => (
+        <>
+          <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            {(() => {
+              const isTeamReady = readyTeams.has(currentTeam);
+              return shuffledAnswers.map((answer, index) => (
+                <Button
+                  key={index}
+                  variant="outlined"
+                  onClick={() => isTeamReady && handleCarréAnswer(answer)}
+                  disabled={!isTeamReady}
+                  sx={{ 
+                    p: 2, 
+                    minHeight: '60px',
+                    opacity: isTeamReady ? 1 : 0.9,
+                    cursor: isTeamReady ? 'pointer' : 'not-allowed',
+                    borderColor: isTeamReady ? TEAM_COLORS[currentTeam - 1] : '#999',
+                    color: isTeamReady ? TEAM_COLORS[currentTeam - 1] : '#666',
+                    borderWidth: '2px',
+                    backgroundColor: isTeamReady ? 'transparent' : '#f5f5f5',
+                    '&:hover': {
+                      borderColor: isTeamReady ? TEAM_COLORS[currentTeam - 1] : '#999',
+                      bgcolor: isTeamReady ? `${TEAM_COLORS[currentTeam - 1]}11` : '#f5f5f5'
+                    },
+                    '&.Mui-disabled': {
+                      borderColor: '#999',
+                      color: '#666',
+                      backgroundColor: '#f5f5f5'
+                    }
+                  }}
+                >
+                  {answer}
+                </Button>
+              ));
+            })()}
+          </Box>
+
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {Array.from({length: gameSettings.players}, (_, i) => i + 1).map(teamNum => (
+              <Button
+                key={teamNum}
+                variant={readyTeams.has(teamNum) ? 'contained' : 'outlined'}
+                onClick={() => handleTeamReady(teamNum)}
+                disabled={readyTeams.has(teamNum)}
+                sx={{
+                  bgcolor: readyTeams.has(teamNum) ? TEAM_COLORS[teamNum - 1] : 'transparent',
+                  color: readyTeams.has(teamNum) ? 'white' : TEAM_COLORS[teamNum - 1],
+                  borderColor: TEAM_COLORS[teamNum - 1],
+                  '&:hover': {
+                    bgcolor: readyTeams.has(teamNum) ? TEAM_COLORS[teamNum - 1] : 'rgba(33, 150, 243, 0.04)'
+                  }
+                }}
+              >
+                Lo so (Squadra {teamNum})
+              </Button>
+            ))}
+          </Box>
+        </>
+      )}
+
+      {!gameState.showAnswer && answerType === 'cache' && !allTeamsReady && (
+        <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {Array.from({length: gameSettings.players}, (_, i) => i + 1).map(teamNum => (
             <Button
-              key={index}
-              variant="outlined"
-              onClick={() => handleCarréAnswer(answer)}
-              sx={{ p: 2, minHeight: '60px' }}
+              key={teamNum}
+              variant={readyTeams.has(teamNum) ? 'contained' : 'outlined'}
+              onClick={() => handleTeamReady(teamNum)}
+              disabled={readyTeams.has(teamNum)}
+              sx={{
+                bgcolor: readyTeams.has(teamNum) ? TEAM_COLORS[teamNum - 1] : 'transparent',
+                color: readyTeams.has(teamNum) ? 'white' : TEAM_COLORS[teamNum - 1],
+                borderColor: TEAM_COLORS[teamNum - 1],
+                '&:hover': {
+                  bgcolor: readyTeams.has(teamNum) ? TEAM_COLORS[teamNum - 1] : 'rgba(33, 150, 243, 0.04)'
+                }
+              }}
             >
-              {answer}
+              Lo so (Squadra {teamNum})
             </Button>
           ))}
         </Box>
       )}
 
-      {!gameState.showAnswer && answerType === 'cache' && (
+      {!gameState.showAnswer && answerType === 'cache' && allTeamsReady && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" color="primary" gutterBottom>
             Risposta: {currentQ.answer}
@@ -153,8 +248,21 @@ function GameComponent({ gameState, setGameState, gameSettings }) {
             Chi ha indovinato?
           </Typography>
           <ButtonGroup variant="outlined" sx={{ mb: 2 }}>
-            <Button onClick={() => handleTeamAnswer('team1')}>Squadra 1</Button>
-            <Button onClick={() => handleTeamAnswer('team2')}>Squadra 2</Button>
+            {Array.from({length: gameSettings.players}, (_, i) => i + 1).map(teamNum => (
+              <Button 
+                key={teamNum}
+                onClick={() => handleTeamAnswer(`team${teamNum}`)}
+                sx={{
+                  color: TEAM_COLORS[teamNum - 1],
+                  borderColor: TEAM_COLORS[teamNum - 1],
+                  '&:hover': {
+                    bgcolor: `${TEAM_COLORS[teamNum - 1]}22`
+                  }
+                }}
+              >
+                Squadra {teamNum}
+              </Button>
+            ))}
             <Button onClick={() => handleTeamAnswer(null)}>Nessuno</Button>
           </ButtonGroup>
         </Box>
