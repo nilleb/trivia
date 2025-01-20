@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Container } from '@mui/material';
 import GameSetup from './GameSetup';
 import QuestionComponent from './QuestionComponent';
+import { translations } from '../translations';
 
 function App() {
   const [gameSettings, setGameSettings] = useState({
     players: 2,
-    language: 'italiano',
+    language: 'it',
     difficulty: 'medio',
     questionsPerRound: 10,
     timePerQuestion: 30
@@ -38,11 +39,11 @@ function App() {
         ...initialState
       }));
 
-      const response = await fetch(`/api/questions?theme=${gameState.theme}`);
+      const response = await fetch(`/api/questions?theme=${gameState.theme}&language=${gameSettings.language}`);
       const data = await response.json();
       
       if (!data.questions || data.questions.length === 0) {
-        throw new Error('Nessuna domanda ricevuta');
+        throw new Error(translations[gameSettings.language].game.noQuestions);
       }
 
       setGameState(prev => ({
@@ -54,7 +55,7 @@ function App() {
       setGameState(prev => ({
         ...prev,
         isPlaying: false,
-        error: error.message || 'Errore nel caricamento delle domande'
+        error: error.message || translations[gameSettings.language].game.loadError
       }));
     }
   };
@@ -86,6 +87,9 @@ function App() {
     }
   };
 
+  // Get translations for current language
+  const t = translations[gameSettings.language];
+
   if (!gameState.isPlaying) {
     return (
       <Container>
@@ -95,6 +99,7 @@ function App() {
           gameState={gameState}
           setGameState={setGameState}
           onStartGame={startGame}
+          t={t}
         />
       </Container>
     );
@@ -113,6 +118,7 @@ function App() {
         onNextQuestion={handleNextQuestion}
         questionNumber={gameState.currentQuestion + 1}
         totalQuestions={gameSettings.questionsPerRound}
+        t={t}
       />
     </Container>
   );

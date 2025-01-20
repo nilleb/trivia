@@ -7,7 +7,8 @@ const TEAM_COLORS = ['#2196f3', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#79
 function TeamReadyButtons({ 
   gameSettings,
   readyTeams,
-  onTeamReady
+  onTeamReady,
+  t
 }) {
   // If any team is ready, all other buttons should be disabled
   const isAnyTeamReady = readyTeams.size > 0;
@@ -38,7 +39,7 @@ function TeamReadyButtons({
               }
             }}
           >
-            Lo so (Squadra {teamNum})
+            {t.game.iKnow} ({t.game.team} {teamNum})
           </Button>
         );
       })}

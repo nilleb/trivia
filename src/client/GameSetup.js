@@ -10,15 +10,15 @@ import {
   Typography
 } from '@mui/material';
 
-function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onStartGame }) {
+function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onStartGame, t }) {
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Impostazioni Gioco
+        {t.gameSetup.title}
       </Typography>
       
       <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Numero di Giocatori</InputLabel>
+        <InputLabel>{t.gameSetup.players}</InputLabel>
         <Select
           value={gameSettings.players}
           onChange={(e) => setGameSettings({...gameSettings, players: e.target.value})}
@@ -30,33 +30,33 @@ function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onS
       </FormControl>
 
       <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Lingua</InputLabel>
+        <InputLabel>{t.gameSetup.language}</InputLabel>
         <Select
           value={gameSettings.language}
           onChange={(e) => setGameSettings({...gameSettings, language: e.target.value})}
         >
-          <MenuItem value="italiano">Italiano</MenuItem>
-          <MenuItem value="english">English</MenuItem>
-          <MenuItem value="français">Français</MenuItem>
+          <MenuItem value="it">Italiano</MenuItem>
+          <MenuItem value="en">English</MenuItem>
+          <MenuItem value="fr">Français</MenuItem>
         </Select>
       </FormControl>
 
       <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Difficoltà</InputLabel>
+        <InputLabel>{t.gameSetup.difficulty.label}</InputLabel>
         <Select
           value={gameSettings.difficulty}
           onChange={(e) => setGameSettings({...gameSettings, difficulty: e.target.value})}
         >
-          <MenuItem value="facile">Facile</MenuItem>
-          <MenuItem value="medio">Medio</MenuItem>
-          <MenuItem value="difficile">Difficile</MenuItem>
+          <MenuItem value="facile">{t.gameSetup.difficulty.easy}</MenuItem>
+          <MenuItem value="medio">{t.gameSetup.difficulty.medium}</MenuItem>
+          <MenuItem value="difficile">{t.gameSetup.difficulty.hard}</MenuItem>
         </Select>
       </FormControl>
 
       <TextField
         fullWidth
         type="number"
-        label="Domande per manche"
+        label={t.gameSetup.questionsPerRound}
         value={gameSettings.questionsPerRound}
         onChange={(e) => setGameSettings({...gameSettings, questionsPerRound: e.target.value})}
         sx={{ mb: 2 }}
@@ -65,7 +65,7 @@ function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onS
       <TextField
         fullWidth
         type="number"
-        label="Secondi per risposta"
+        label={t.gameSetup.timePerQuestion}
         value={gameSettings.timePerQuestion}
         onChange={(e) => setGameSettings({...gameSettings, timePerQuestion: e.target.value})}
         sx={{ mb: 2 }}
@@ -73,7 +73,7 @@ function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onS
 
       <TextField
         fullWidth
-        label="Tema delle domande"
+        label={t.gameSetup.theme}
         value={gameState.theme || ''}
         onChange={(e) => setGameState({...gameState, theme: e.target.value})}
         sx={{ mb: 2 }}
@@ -87,7 +87,7 @@ function GameSetup({ gameSettings, setGameSettings, gameState, setGameState, onS
         onClick={onStartGame}
         sx={{ mt: 2, mb: 2 }}
       >
-        Inizia Gioco
+        {t.gameSetup.startGame}
       </Button>
 
       {gameState.error && (

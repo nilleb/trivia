@@ -11,7 +11,8 @@ function CacheQuestion({
   readyTeams,
   onTeamReady,
   onAnswer,
-  allTeamsReady
+  allTeamsReady,
+  t
 }) {
   const [proposedAnswer, setProposedAnswer] = useState('');
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -31,6 +32,7 @@ function CacheQuestion({
         gameSettings={gameSettings}
         readyTeams={readyTeams}
         onTeamReady={onTeamReady}
+        t={t}
       />
     );
   }
@@ -39,7 +41,7 @@ function CacheQuestion({
     return (
       <Box sx={{ mt: 2 }}>
         <Typography variant="h6" gutterBottom>
-          Risposta della Squadra {buzzedTeam}:
+          {t.game.answering} {buzzedTeam}:
         </Typography>
         <Typography 
           variant="body1" 
@@ -53,7 +55,7 @@ function CacheQuestion({
         </Typography>
         
         <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-          Risposta corretta:
+          {t.game.correctAnswer}:
         </Typography>
         <Typography variant="body1" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
           {answer}
@@ -68,8 +70,8 @@ function CacheQuestion({
           }}
         >
           {isCorrect ? 
-            '✓ Risposta corretta! (5 punti)' : 
-            '✗ Risposta sbagliata'}
+            `✓ ${t.game.correctAnswer}! (5 ${t.game.points})` : 
+            `✗ ${t.game.wrongAnswer}`}
         </Typography>
       </Box>
     );
@@ -78,7 +80,7 @@ function CacheQuestion({
   return (
     <Box sx={{ mt: 2 }}>
       <Typography variant="subtitle1" gutterBottom>
-        Squadra {buzzedTeam}, scrivi la tua risposta:
+        {t.game.team} {buzzedTeam}, {t.game.typeAnswer}:
       </Typography>
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
         <TextField
@@ -110,7 +112,7 @@ function CacheQuestion({
             },
           }}
         >
-          Conferma
+          {t.game.confirm}
         </Button>
       </Box>
     </Box>

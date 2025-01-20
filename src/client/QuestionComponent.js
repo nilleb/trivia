@@ -14,7 +14,8 @@ function QuestionComponent({
   onAnswer,
   onNextQuestion,
   questionNumber,
-  totalQuestions
+  totalQuestions,
+  t
 }) {
   const [timeLeft, setTimeLeft] = useState(gameSettings.timePerQuestion);
   const [answerType, setAnswerType] = useState(null);
@@ -99,20 +100,22 @@ function QuestionComponent({
     <Box sx={{ mt: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5">
-          Domanda {questionNumber}/{totalQuestions}
+          {t.game.question} {questionNumber}/{totalQuestions}
         </Typography>
         <Typography variant="h5">
           {Object.entries(scores).map(([team, score], index) => (
             <span key={team}>
               {index > 0 && ' - '}
-              Squadra {team.replace('team', '')}: {score}
+              {t.game.team} {team.replace('team', '')}: {score}
             </span>
           ))}
         </Typography>
       </Box>
 
       <Typography variant="subtitle1" gutterBottom color="primary">
-        {activeTeam ? `Risponde: Squadra ${activeTeam}` : `Turno: Squadra ${currentTeam}`}
+        {activeTeam ? 
+          `${t.game.answering} ${activeTeam}` : 
+          `${t.game.turn} ${currentTeam}`}
       </Typography>
 
       {timerStarted && (
@@ -134,13 +137,13 @@ function QuestionComponent({
             onClick={() => handleAnswerTypeSelect('carré')}
             sx={{ mr: 1 }}
           >
-            Carré
+            {t.game.carré}
           </Button>
           <Button 
             variant={answerType === 'cache' ? 'contained' : 'outlined'}
             onClick={() => handleAnswerTypeSelect('cache')}
           >
-            Cache
+            {t.game.cache}
           </Button>
         </Box>
       )}
@@ -153,6 +156,7 @@ function QuestionComponent({
           onAnswer={handleCarréAnswer}
           onTeamReady={handleTeamReady}
           gameSettings={gameSettings}
+          t={t}
         />
       )}
 
@@ -164,6 +168,7 @@ function QuestionComponent({
           onTeamReady={handleTeamReady}
           onAnswer={handleTeamAnswer}
           allTeamsReady={allTeamsReady}
+          t={t}
         />
       )}
 
@@ -171,7 +176,7 @@ function QuestionComponent({
         <Box sx={{ mb: 2 }}>
           {/* Common feedback for both modes */}
           <Typography variant="h6" color="primary">
-            Risposta: {question.answer}
+            {t.game.correctAnswer}: {question.answer}
           </Typography>
           
           {activeTeam && (
@@ -184,13 +189,13 @@ function QuestionComponent({
               }}
             >
               {lastAnswerCorrect ? 
-                `✓ Risposta corretta! (${answerType === 'cache' ? '5' : '1'} ${answerType === 'cache' ? 'punti' : 'punto'})` : 
-                '✗ Risposta sbagliata'}
+                `✓ ${t.game.correctAnswer}! (${answerType === 'cache' ? '5' : '1'} ${answerType === 'cache' ? t.game.points : t.game.point})` : 
+                `✗ ${t.game.wrongAnswer}`}
             </Typography>
           )}
 
           <Typography variant="body1" sx={{ mt: 1 }}>
-            Fatto interessante: {question.funFact}
+            {t.game.funFact}: {question.funFact}
           </Typography>
         </Box>
       )}
@@ -200,7 +205,7 @@ function QuestionComponent({
         onClick={onNextQuestion}
         disabled={!showAnswer}
       >
-        Prossima Domanda
+        {t.game.nextQuestion}
       </Button>
     </Box>
   );

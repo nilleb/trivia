@@ -11,7 +11,8 @@ function CarréQuestion({
   readyTeams,
   onAnswer,
   onTeamReady,
-  gameSettings
+  gameSettings,
+  t
 }) {
   const isAnyTeamReady = readyTeams.size > 0;
 
@@ -53,6 +54,7 @@ function CarréQuestion({
         gameSettings={gameSettings}
         readyTeams={readyTeams}
         onTeamReady={onTeamReady}
+        t={t}
       />
     </>
   );

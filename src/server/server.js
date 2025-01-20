@@ -27,13 +27,52 @@ console.log(process.env.NODE_ENV === 'development');
 
 app.get('/api/questions', async (req, res) => {
   const theme = req.query.theme;
+  const language = req.query.language || 'it';
+  
+  // Language-specific prompts
+  const prompts = {
+    it: `Genera 10 domande quiz sul tema "${theme}" con difficoltà medio. 
+    Per ogni domanda fornisci:
+    1. La domanda
+    2. La risposta corretta
+    3. Tre risposte sbagliate plausibili
+    4. Un fatto interessante correlato
+    Rispondi in lingua italiano.`,
+    en: `Generate 10 quiz questions about "${theme}" with medium difficulty.
+    For each question provide:
+    1. The question
+    2. The correct answer
+    3. Three plausible wrong answers
+    4. A related fun fact
+    Answer in English.`,
+    fr: `Générez 10 questions de quiz sur le thème "${theme}" avec une difficulté moyenne.
+    Pour chaque question, fournissez :
+    1. La question
+    2. La bonne réponse
+    3. Trois mauvaises réponses plausibles
+    4. Un fait intéressant lié
+    Répondez en français.`
+  };
+
+  const prompt = `${prompts[language]}
+    Formato JSON richiesto:
+    {
+      "questions": [
+        {
+          "question": "...",
+          "answer": "...",
+          "wrongAnswers": ["...", "...", "..."],
+          "funFact": "..."
+        }
+      ]
+    }`;
   
   // In development, try to load from logs first
   if (process.env.NODE_ENV === 'development') {
     try {
       const files = await fsPromises.readdir(logsDir);
       const logFiles = files
-        .filter(file => file.startsWith(`quiz-${theme}-`))
+        .filter(file => file.startsWith(`quiz-${theme}-${language}-`))
         .sort()
         .reverse();
 
@@ -50,25 +89,6 @@ app.get('/api/questions', async (req, res) => {
 
   // If no log file found or in production, generate new questions
   try {
-    const prompt = `Genera 10 domande quiz sul tema "${theme}" con difficoltà medio. 
-    Per ogni domanda fornisci:
-    1. La domanda
-    2. La risposta corretta
-    3. Tre risposte sbagliate plausibili
-    4. Un fatto interessante correlato
-    Rispondi in lingua italiano.
-    Formato JSON richiesto:
-    {
-      "questions": [
-        {
-          "question": "...",
-          "answer": "...",
-          "wrongAnswers": ["...", "...", "..."],
-          "funFact": "..."
-        }
-      ]
-    }`;
-
     console.log('Sending request to OpenAI...');
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -95,11 +115,11 @@ app.get('/api/questions', async (req, res) => {
     if (process.env.NODE_ENV === 'development') {
       try {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const logFile = path.join(logsDir, `quiz-${theme}-${timestamp}.json`);
+        const logFile = path.join(logsDir, `quiz-${theme}-${language}-${timestamp}.json`);
         const logData = {
           prompt,
           response,
-          settings: { theme, difficulty: 'medio', language: 'italiano', numberOfQuestions: 10 },
+          settings: { theme, language, difficulty: 'medio', numberOfQuestions: 10 },
           timestamp: new Date().toISOString()
         };
         
