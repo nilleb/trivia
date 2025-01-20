@@ -1,6 +1,7 @@
 const express = require('express');
 const { OpenAI } = require('openai');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 require('dotenv').config();
 
@@ -22,20 +23,22 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+console.log(process.env.NODE_ENV === 'development');
+
 app.get('/api/questions', async (req, res) => {
   const theme = req.query.theme;
   
   // In development, try to load from logs first
   if (process.env.NODE_ENV === 'development') {
     try {
-      const files = await fs.readdir(logsDir);
+      const files = await fsPromises.readdir(logsDir);
       const logFiles = files
         .filter(file => file.startsWith(`quiz-${theme}-`))
         .sort()
         .reverse();
 
       if (logFiles.length > 0) {
-        const latestLog = await fs.readFile(path.join(logsDir, logFiles[0]), 'utf-8');
+        const latestLog = await fsPromises.readFile(path.join(logsDir, logFiles[0]), 'utf-8');
         const logData = JSON.parse(latestLog);
         console.log(`Loaded questions from log file: ${logFiles[0]}`);
         return res.json(logData.response);
@@ -100,7 +103,7 @@ app.get('/api/questions', async (req, res) => {
           timestamp: new Date().toISOString()
         };
         
-        await fs.writeFile(logFile, JSON.stringify(logData, null, 2));
+        await fsPromises.writeFile(logFile, JSON.stringify(logData, null, 2));
         console.log(`Log file written successfully: ${logFile}`);
       } catch (logError) {
         console.error('Error writing log file:', logError);
