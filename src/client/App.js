@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Container } from '@mui/material';
+import { Container, Box, Button, Typography } from '@mui/material';
+import { GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import GameSetup from './GameSetup';
 import QuestionComponent from './QuestionComponent';
 import EndGameScreen from './EndGameScreen';
@@ -14,6 +16,9 @@ function App() {
     timePerQuestion: 30
   });
 
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+
   const [gameState, setGameState] = useState({
     isPlaying: false,
     currentQuestion: 0,
@@ -24,7 +29,26 @@ function App() {
     isGameOver: false
   });
 
+  const handleLogin = async (credentialResponse) => {
+    setToken(credentialResponse.credential);
+    try {
+      const response = await fetch('/api/user', {
+        headers: {
+          'Authorization': `Bearer ${credentialResponse.credential}`
+        }
+      });
+      const userData = await response.json();
+      setUser(userData);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
   const startGame = async () => {
+    if (!token) {
+      return;
+    }
+
     try {
       const initialState = {
         isPlaying: true,
@@ -42,7 +66,14 @@ function App() {
         ...initialState
       }));
 
-      const response = await fetch(`/api/questions?theme=${gameState.theme}&language=${gameSettings.language}&difficulty=${gameSettings.difficulty}`);
+      const response = await fetch(
+        `/api/questions?theme=${gameState.theme}&language=${gameSettings.language}&difficulty=${gameSettings.difficulty}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       const data = await response.json();
       
       if (!data.questions || data.questions.length === 0) {
@@ -105,6 +136,41 @@ function App() {
 
   // Get translations for current language
   const t = translations[gameSettings.language];
+
+  if (!user) {
+    const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
+      return (
+        <Container>
+          <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+            <Typography variant="h4" color="error" gutterBottom>
+              Configuration Error
+            </Typography>
+            <Typography>
+              Google Client ID is not configured. Please check your environment variables.
+            </Typography>
+          </Box>
+        </Container>
+      );
+    }
+
+    return (
+      <GoogleOAuthProvider clientId={clientId}>
+        <Container>
+          <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+            <Typography variant="h4" gutterBottom>
+              {t?.auth?.welcome || 'Welcome to Trivia Game'}
+            </Typography>
+            <GoogleLogin
+              onSuccess={handleLogin}
+              onError={() => console.log('Login Failed')}
+            />
+          </Box>
+        </Container>
+      </GoogleOAuthProvider>
+    );
+  }
 
   if (gameState.isGameOver) {
     return (

@@ -3,10 +3,41 @@ const { OpenAI } = require('openai');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
+const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    req.user = {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    };
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
 
 const STRUCTURED_OUTPUT_SCHEMA = {
   "name": "questions_schema",
@@ -74,7 +105,13 @@ const openai = new OpenAI({
 
 console.log(process.env.NODE_ENV === 'development');
 
-app.get('/api/questions', async (req, res) => {
+// Protected route example
+app.get('/api/user', authenticateToken, (req, res) => {
+  res.json(req.user);
+});
+
+// Apply authentication to questions route
+app.get('/api/questions', authenticateToken, async (req, res) => {
   const theme = req.query.theme;
   const language = req.query.language || 'it';
   const difficulty = req.query.difficulty || 'medio';
