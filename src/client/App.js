@@ -59,13 +59,13 @@ function App() {
     }
   };
 
-  const handleAnswer = (team, isCorrect) => {
+  const handleAnswer = (team, isCorrect, points = 1) => {
     if (isCorrect && team) {
       setGameState(prev => ({
         ...prev,
         scores: {
           ...prev.scores,
-          [team]: prev.scores[team] + 1
+          [team]: prev.scores[team] + points
         }
       }));
     }

@@ -23,6 +23,7 @@ function QuestionComponent({
   const [readyTeams, setReadyTeams] = useState(new Set());
   const [showAnswer, setShowAnswer] = useState(false);
   const [activeTeam, setActiveTeam] = useState(null);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState(null);
 
   // Reset states when question changes
   useEffect(() => {
@@ -34,6 +35,7 @@ function QuestionComponent({
       setShowAnswer(false);
       setTimeLeft(gameSettings.timePerQuestion);
       setActiveTeam(null);
+      setLastAnswerCorrect(null);
     }
   }, [question, gameSettings.timePerQuestion]);
 
@@ -63,16 +65,21 @@ function QuestionComponent({
     setActiveTeam(teamNumber);
   };
 
-  const handleTeamAnswer = (team) => {
+  const handleTeamAnswer = (team, isCorrect) => {
     setShowAnswer(true);
-    onAnswer(team, true);
+    setLastAnswerCorrect(isCorrect);
+    // Cache questions are worth 5 points
+    onAnswer(team, isCorrect, 5);
   };
 
   const handleCarréAnswer = (answer) => {
+    const isCorrect = answer === question.answer;
     setShowAnswer(true);
+    setLastAnswerCorrect(isCorrect);
     // Use the team that buzzed in, not the turn-based team
     const teamThatAnswered = activeTeam || currentTeam;
-    onAnswer(`team${teamThatAnswered}`, answer === question.answer);
+    // Carré questions are worth 1 point
+    onAnswer(`team${teamThatAnswered}`, isCorrect, 1);
   };
 
   const allTeamsReady = readyTeams.size === gameSettings.players;
@@ -162,11 +169,26 @@ function QuestionComponent({
 
       {showAnswer && (
         <Box sx={{ mb: 2 }}>
-          {answerType === 'carré' && (
-            <Typography variant="h6" color="primary">
-              Risposta: {question.answer}
+          {/* Common feedback for both modes */}
+          <Typography variant="h6" color="primary">
+            Risposta: {question.answer}
+          </Typography>
+          
+          {activeTeam && (
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                mt: 1,
+                color: lastAnswerCorrect ? 'success.main' : 'error.main',
+                fontWeight: 'bold'
+              }}
+            >
+              {lastAnswerCorrect ? 
+                `✓ Risposta corretta! (${answerType === 'cache' ? '5' : '1'} ${answerType === 'cache' ? 'punti' : 'punto'})` : 
+                '✗ Risposta sbagliata'}
             </Typography>
           )}
+
           <Typography variant="body1" sx={{ mt: 1 }}>
             Fatto interessante: {question.funFact}
           </Typography>
