@@ -27,11 +27,18 @@ export const translations = {
       nextQuestion: 'Next Question',
       iKnow: 'I Know',
       confirm: 'Confirm',
-      typeAnswer: 'Type your answer',
+      typeAnswer: 'type your answer',
       funFact: 'Fun Fact',
       loading: 'Loading questions...',
       carré: 'Carré',
       cache: 'Cache',
+      gameOver: 'Game Over!',
+      winner: 'Winner',
+      tie: 'It\'s a Tie!',
+      finalScores: 'Final Scores',
+      newGame: 'New Game',
+      noQuestions: 'No questions received',
+      loadError: 'Error loading questions'
     }
   },
   fr: {
@@ -62,11 +69,18 @@ export const translations = {
       nextQuestion: 'Question Suivante',
       iKnow: 'Je Sais',
       confirm: 'Confirmer',
-      typeAnswer: 'Écrivez votre réponse',
+      typeAnswer: 'écrivez votre réponse',
       funFact: 'Le Saviez-vous',
       loading: 'Chargement des questions...',
       carré: 'Carré',
       cache: 'Cache',
+      gameOver: 'Fin de la Partie !',
+      winner: 'Gagnant',
+      tie: 'Match Nul !',
+      finalScores: 'Scores Finaux',
+      newGame: 'Nouvelle Partie',
+      noQuestions: 'Aucune question reçue',
+      loadError: 'Erreur lors du chargement des questions'
     }
   },
   it: {
@@ -97,11 +111,18 @@ export const translations = {
       nextQuestion: 'Prossima Domanda',
       iKnow: 'Lo so',
       confirm: 'Conferma',
-      typeAnswer: 'Scrivi la tua risposta',
+      typeAnswer: 'scrivi la tua risposta',
       funFact: 'Fatto interessante',
       loading: 'Caricamento domande...',
       carré: 'Carré',
       cache: 'Cache',
+      gameOver: 'Fine Partita!',
+      winner: 'Vincitore',
+      tie: 'Pareggio!',
+      finalScores: 'Punteggi Finali',
+      newGame: 'Nuova Partita',
+      noQuestions: 'Nessuna domanda ricevuta',
+      loadError: 'Errore nel caricamento delle domande'
     }
   }
 }; 

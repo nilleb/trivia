@@ -92,8 +92,8 @@ app.get('/api/questions', async (req, res) => {
     console.log('Sending request to OpenAI...');
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
-      temperature: 0.7,
+      model: "gpt-4o-mini",
+      temperature: 0.3,
     });
 
     console.log('Received response from OpenAI');

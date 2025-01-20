@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container } from '@mui/material';
 import GameSetup from './GameSetup';
 import QuestionComponent from './QuestionComponent';
+import EndGameScreen from './EndGameScreen';
 import { translations } from '../translations';
 
 function App() {
@@ -19,7 +20,8 @@ function App() {
     showAnswer: false,
     questions: [],
     theme: '',
-    scores: {}
+    scores: {},
+    isGameOver: false
   });
 
   const startGame = async () => {
@@ -29,6 +31,7 @@ function App() {
         questions: [],
         currentQuestion: 0,
         error: null,
+        isGameOver: false,
         scores: Object.fromEntries(
           Array.from({length: gameSettings.players}, (_, i) => [`team${i+1}`, 0])
         )
@@ -82,13 +85,38 @@ function App() {
     } else {
       setGameState(prev => ({
         ...prev,
-        isPlaying: false
+        isPlaying: false,
+        isGameOver: true
       }));
     }
   };
 
+  const handleNewGame = () => {
+    setGameState({
+      isPlaying: false,
+      currentQuestion: 0,
+      showAnswer: false,
+      questions: [],
+      theme: '',
+      scores: {},
+      isGameOver: false
+    });
+  };
+
   // Get translations for current language
   const t = translations[gameSettings.language];
+
+  if (gameState.isGameOver) {
+    return (
+      <Container>
+        <EndGameScreen
+          scores={gameState.scores}
+          onNewGame={handleNewGame}
+          t={t}
+        />
+      </Container>
+    );
+  }
 
   if (!gameState.isPlaying) {
     return (
