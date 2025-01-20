@@ -42,7 +42,7 @@ function App() {
         ...initialState
       }));
 
-      const response = await fetch(`/api/questions?theme=${gameState.theme}&language=${gameSettings.language}`);
+      const response = await fetch(`/api/questions?theme=${gameState.theme}&language=${gameSettings.language}&difficulty=${gameSettings.difficulty}`);
       const data = await response.json();
       
       if (!data.questions || data.questions.length === 0) {

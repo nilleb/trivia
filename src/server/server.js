@@ -8,6 +8,55 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
+const STRUCTURED_OUTPUT_SCHEMA = {
+  "name": "questions_schema",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "questions": {
+        "type": "array",
+        "description": "A list of questions with their respective answers and additional information.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "question": {
+              "type": "string",
+              "description": "The question being asked."
+            },
+            "answer": {
+              "type": "string",
+              "description": "The correct answer to the question."
+            },
+            "wrongAnswers": {
+              "type": "array",
+              "description": "A list of incorrect answers.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "funFact": {
+              "type": "string",
+              "description": "An interesting fact related to the question."
+            }
+          },
+          "required": [
+            "question",
+            "answer",
+            "wrongAnswers",
+            "funFact"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "questions"
+    ],
+    "additionalProperties": false
+  },
+  "strict": true
+}
+
 // Improved logs directory handling
 const logsDir = path.join(__dirname, '../../logs');
 try {
@@ -28,24 +77,25 @@ console.log(process.env.NODE_ENV === 'development');
 app.get('/api/questions', async (req, res) => {
   const theme = req.query.theme;
   const language = req.query.language || 'it';
+  const difficulty = req.query.difficulty || 'medio';
   
   // Language-specific prompts
   const prompts = {
-    it: `Genera 10 domande quiz sul tema "${theme}" con difficoltà medio. 
+    it: `Genera 10 domande quiz sul tema "${theme}" con difficoltà ${difficulty}. 
     Per ogni domanda fornisci:
     1. La domanda
     2. La risposta corretta
     3. Tre risposte sbagliate plausibili
     4. Un fatto interessante correlato
     Rispondi in lingua italiano.`,
-    en: `Generate 10 quiz questions about "${theme}" with medium difficulty.
+    en: `Generate 10 quiz questions about "${theme}" with ${difficulty} difficulty.
     For each question provide:
     1. The question
     2. The correct answer
     3. Three plausible wrong answers
     4. A related fun fact
     Answer in English.`,
-    fr: `Générez 10 questions de quiz sur le thème "${theme}" avec une difficulté moyenne.
+    fr: `Générez 10 questions de quiz sur le thème "${theme}" avec une difficulté ${difficulty}.
     Pour chaque question, fournissez :
     1. La question
     2. La bonne réponse
@@ -54,25 +104,14 @@ app.get('/api/questions', async (req, res) => {
     Répondez en français.`
   };
 
-  const prompt = `${prompts[language]}
-    Formato JSON richiesto:
-    {
-      "questions": [
-        {
-          "question": "...",
-          "answer": "...",
-          "wrongAnswers": ["...", "...", "..."],
-          "funFact": "..."
-        }
-      ]
-    }`;
+  const prompt = `${prompts[language]}`;
   
   // In development, try to load from logs first
   if (process.env.NODE_ENV === 'development') {
     try {
       const files = await fsPromises.readdir(logsDir);
       const logFiles = files
-        .filter(file => file.startsWith(`quiz-${theme}-${language}-`))
+        .filter(file => file.startsWith(`quiz-${theme}-${language}-${difficulty}-`))
         .sort()
         .reverse();
 
@@ -92,8 +131,12 @@ app.get('/api/questions', async (req, res) => {
     console.log('Sending request to OpenAI...');
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-4o-mini",
+      model: "gpt-4o-mini-2024-07-18",
       temperature: 0.3,
+      response_format: {
+        type: "json_schema",
+        json_schema:STRUCTURED_OUTPUT_SCHEMA,
+      },
     });
 
     console.log('Received response from OpenAI');
@@ -115,11 +158,11 @@ app.get('/api/questions', async (req, res) => {
     if (process.env.NODE_ENV === 'development') {
       try {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const logFile = path.join(logsDir, `quiz-${theme}-${language}-${timestamp}.json`);
+        const logFile = path.join(logsDir, `quiz-${theme}-${language}-${difficulty}-${timestamp}.json`);
         const logData = {
           prompt,
           response,
-          settings: { theme, language, difficulty: 'medio', numberOfQuestions: 10 },
+          settings: { theme, language, difficulty, numberOfQuestions: 10 },
           timestamp: new Date().toISOString()
         };
         
