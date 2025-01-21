@@ -101,6 +101,25 @@ const STRUCTURED_OUTPUT_SCHEMA = {
   "strict": true
 }
 
+const ANSWER_VERIFICATION_SCHEMA = {
+  "type": "object",
+  "properties": {
+    "isCorrect": {
+      "type": "boolean",
+      "description": "Whether the given answer is correct or not"
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Explanation of why the answer is correct or incorrect"
+    },
+    "similarity": {
+      "type": "number",
+      "description": "A score from 0 to 1 indicating how close the given answer is to the correct answer"
+    }
+  },
+  "required": ["isCorrect", "explanation", "similarity"]
+};
+
 // Improved logs directory handling
 const logsDir = path.join(__dirname, '../../logs');
 try {
@@ -228,6 +247,57 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
     console.error('Error generating questions:', error);
     res.status(500).json({ 
       error: 'Error generating questions',
+      details: error.toString()
+    });
+  }
+});
+
+// Verify answer endpoint
+app.post('/api/verify-answer', authenticateToken, async (req, res) => {
+  try {
+    const { givenAnswer, correctAnswer, question, language = 'it' } = req.body;
+
+    if (!givenAnswer || !correctAnswer || !question) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'givenAnswer, correctAnswer, and question are required'
+      });
+    }
+
+    const prompts = {
+      it: `Valuta se la risposta data "${givenAnswer}" è corretta per la domanda "${question}". 
+          La risposta corretta è "${correctAnswer}".
+          Considera sinonimi, errori di battitura minori e variazioni nella formulazione.
+          Fornisci una spiegazione dettagliata del perché la risposta è corretta o sbagliata.`,
+      en: `Evaluate if the given answer "${givenAnswer}" is correct for the question "${question}". 
+          The correct answer is "${correctAnswer}".
+          Consider synonyms, minor typos, and variations in phrasing.
+          Provide a detailed explanation of why the answer is correct or incorrect.`,
+      fr: `Évaluez si la réponse donnée "${givenAnswer}" est correcte pour la question "${question}". 
+          La bonne réponse est "${correctAnswer}".
+          Tenez compte des synonymes, des fautes de frappe mineures et des variations dans la formulation.
+          Fournissez une explication détaillée de la raison pour laquelle la réponse est correcte ou incorrecte.`
+    };
+
+    const prompt = prompts[language] || prompts.en;
+
+    const completion = await openai.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4",
+      temperature: 0.3,
+      response_format: {
+        type: "json_schema",
+        schema: ANSWER_VERIFICATION_SCHEMA,
+      },
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+    res.json(result);
+
+  } catch (error) {
+    console.error('Error verifying answer:', error);
+    res.status(500).json({
+      error: 'Error verifying answer',
       details: error.toString()
     });
   }

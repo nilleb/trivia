@@ -25,6 +25,8 @@ function QuestionComponent({
   const [showAnswer, setShowAnswer] = useState(false);
   const [activeTeam, setActiveTeam] = useState(null);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState(null);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Reset states when question changes
   useEffect(() => {
@@ -66,21 +68,54 @@ function QuestionComponent({
     setActiveTeam(teamNumber);
   };
 
-  const handleTeamAnswer = (team, isCorrect) => {
-    setShowAnswer(true);
-    setLastAnswerCorrect(isCorrect);
-    // Cache questions are worth 5 points
-    onAnswer(team, isCorrect, 5);
+  const verifyAnswer = async (givenAnswer) => {
+    setIsVerifying(true);
+    try {
+      const response = await fetch('/api/verify-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('trivia_token')}`
+        },
+        body: JSON.stringify({
+          givenAnswer,
+          correctAnswer: question.answer,
+          question: question.question,
+          language: gameSettings.language
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify answer');
+      }
+
+      const result = await response.json();
+      setVerificationResult(result);
+      return result;
+    } catch (error) {
+      console.error('Error verifying answer:', error);
+      return { isCorrect: givenAnswer === question.answer, explanation: null };
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleCarréAnswer = (answer) => {
-    const isCorrect = answer === question.answer;
+  const handleTeamAnswer = async (team, givenAnswer) => {
     setShowAnswer(true);
-    setLastAnswerCorrect(isCorrect);
+    const result = await verifyAnswer(givenAnswer);
+    setLastAnswerCorrect(result.isCorrect);
+    // Cache questions are worth 5 points
+    onAnswer(team, result.isCorrect, 5);
+  };
+
+  const handleCarréAnswer = async (answer) => {
+    setShowAnswer(true);
+    const result = await verifyAnswer(answer);
+    setLastAnswerCorrect(result.isCorrect);
     // Use the team that buzzed in, not the turn-based team
     const teamThatAnswered = activeTeam || currentTeam;
     // Carré questions are worth 1 point
-    onAnswer(`team${teamThatAnswered}`, isCorrect, 1);
+    onAnswer(`team${teamThatAnswered}`, result.isCorrect, 1);
   };
 
   const allTeamsReady = readyTeams.size === gameSettings.players;
@@ -174,27 +209,46 @@ function QuestionComponent({
 
       {showAnswer && (
         <Box sx={{ mb: 2 }}>
-          {/* Common feedback for both modes */}
           <Typography variant="h6" color="primary">
             {t.game.correctAnswer}: {question.answer}
           </Typography>
           
           {activeTeam && (
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
-                mt: 1,
-                color: lastAnswerCorrect ? 'success.main' : 'error.main',
-                fontWeight: 'bold'
-              }}
-            >
-              {lastAnswerCorrect ? 
-                `✓ ${t.game.correctAnswer}! (${answerType === 'cache' ? '5' : '1'} ${answerType === 'cache' ? t.game.points : t.game.point})` : 
-                `✗ ${t.game.wrongAnswer}`}
-            </Typography>
+            <>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  mt: 1,
+                  color: lastAnswerCorrect ? 'success.main' : 'error.main',
+                  fontWeight: 'bold'
+                }}
+              >
+                {lastAnswerCorrect ? 
+                  `✓ ${t.game.correctAnswer}! (${answerType === 'cache' ? '5' : '1'} ${answerType === 'cache' ? t.game.points : t.game.point})` : 
+                  `✗ ${t.game.wrongAnswer}`}
+              </Typography>
+              {isVerifying ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <CircularProgress size={20} sx={{ mr: 1 }} />
+                  <Typography>{t.game.verifying || 'Verifying answer...'}</Typography>
+                </Box>
+              ) : verificationResult?.explanation && (
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    mt: 1,
+                    p: 2,
+                    bgcolor: 'grey.100',
+                    borderRadius: 1
+                  }}
+                >
+                  {verificationResult.explanation}
+                </Typography>
+              )}
+            </>
           )}
 
-          <Typography variant="body1" sx={{ mt: 1 }}>
+          <Typography variant="body1" sx={{ mt: 2 }}>
             {t.game.funFact}: {question.funFact}
           </Typography>
         </Box>
