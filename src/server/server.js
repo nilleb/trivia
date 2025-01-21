@@ -12,6 +12,9 @@ app.use(express.json());
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Get allowed emails from environment variable
+const allowedEmails = process.env.ALLOWED_EMAILS ? process.env.ALLOWED_EMAILS.split(',').map(email => email.trim()) : [];
+
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
   try {
@@ -27,6 +30,16 @@ const authenticateToken = async (req, res, next) => {
     });
 
     const payload = ticket.getPayload();
+    
+    // Check if user's email is in the allowed list
+    if (allowedEmails.length > 0 && !allowedEmails.includes(payload.email)) {
+      console.log(`Unauthorized access attempt from email: ${payload.email}`);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'Your email is not authorized to access this application'
+      });
+    }
+
     req.user = {
       email: payload.email,
       name: payload.name,
@@ -103,7 +116,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-console.log(process.env.NODE_ENV === 'development');
+console.log(`${process.env.NODE_ENV === 'development' ? 'Development' : 'Production'} mode`);
 
 // Protected route example
 app.get('/api/user', authenticateToken, (req, res) => {
@@ -221,6 +234,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server in ascolto sulla porta ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`${process.env.NODE_ENV === 'development' ? 'Development' : 'Production'} mode`);
 }); 

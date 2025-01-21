@@ -31,6 +31,8 @@ function App() {
     isGameOver: false
   });
 
+  const [loginError, setLoginError] = useState(null);
+
   const handleLogin = async (credentialResponse) => {
     const newToken = credentialResponse.credential;
     setToken(newToken);
@@ -42,11 +44,24 @@ function App() {
           'Authorization': `Bearer ${newToken}`
         }
       });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          const error = await response.json();
+          throw new Error(error.message || 'You are not authorized to access this application');
+        }
+        throw new Error('Failed to authenticate');
+      }
+
       const userData = await response.json();
       setUser(userData);
       localStorage.setItem('trivia_user', JSON.stringify(userData));
     } catch (error) {
       console.error('Error fetching user data:', error);
+      // Clear any stored data on error
+      handleLogout();
+      // Update state to show error in AuthWrapper
+      setLoginError(error.message);
     }
   };
 
@@ -166,6 +181,7 @@ function App() {
         clientId={process.env.GOOGLE_CLIENT_ID}
         onLogin={handleLogin}
         t={t}
+        loginError={loginError}
       />
     );
   }
