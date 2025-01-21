@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const dotenv = require('dotenv');
+const CopyPlugin = require('copy-webpack-plugin');
 
 // Load environment variables from .env
 const env = dotenv.config().parsed;
@@ -28,6 +29,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js',
+    publicPath: '/'
   },
   module: {
     rules: [
@@ -38,10 +40,22 @@ module.exports = {
           loader: 'babel-loader',
         },
       },
+      {
+        test: /\.(png|svg|jpg|jpeg|gif|ico)$/i,
+        type: 'asset/resource',
+      },
     ],
   },
   plugins: [
-    new webpack.DefinePlugin(envKeys)
+    new webpack.DefinePlugin(envKeys),
+    new CopyPlugin({
+      patterns: [
+        { 
+          from: 'public',
+          to: '' 
+        },
+      ],
+    }),
   ],
   devServer: {
     static: {

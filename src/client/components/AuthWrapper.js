@@ -22,6 +22,17 @@ const AuthWrapper = ({ clientId, onLogin, t, loginError }) => {
     <GoogleOAuthProvider clientId={clientId}>
       <Container>
         <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+          <Box 
+            component="img"
+            src="/images/trivia_game_icon.webp"
+            alt="Trivia Game"
+            sx={{ 
+              width: 128,
+              height: 128,
+              mb: 2,
+              objectFit: 'contain'
+            }}
+          />
           <Typography variant="h4" gutterBottom>
             {t?.auth?.welcome || 'Welcome to Trivia Game'}
           </Typography>
