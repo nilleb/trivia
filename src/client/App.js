@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import { Container, Box, Button, Typography } from '@mui/material';
-import { GoogleLogin } from '@react-oauth/google';
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import GameSetup from './GameSetup';
-import QuestionComponent from './QuestionComponent';
-import EndGameScreen from './EndGameScreen';
 import { translations } from '../translations';
+import AuthWrapper from './components/AuthWrapper';
+import GameContainer from './components/GameContainer';
 
 function App() {
   const [gameSettings, setGameSettings] = useState({
@@ -16,8 +12,14 @@ function App() {
     timePerQuestion: 30
   });
 
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('trivia_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('trivia_token') || null;
+  });
 
   const [gameState, setGameState] = useState({
     isPlaying: false,
@@ -30,18 +32,29 @@ function App() {
   });
 
   const handleLogin = async (credentialResponse) => {
-    setToken(credentialResponse.credential);
+    const newToken = credentialResponse.credential;
+    setToken(newToken);
+    localStorage.setItem('trivia_token', newToken);
+    
     try {
       const response = await fetch('/api/user', {
         headers: {
-          'Authorization': `Bearer ${credentialResponse.credential}`
+          'Authorization': `Bearer ${newToken}`
         }
       });
       const userData = await response.json();
       setUser(userData);
+      localStorage.setItem('trivia_user', JSON.stringify(userData));
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('trivia_user');
+    localStorage.removeItem('trivia_token');
   };
 
   const startGame = async () => {
@@ -74,6 +87,16 @@ function App() {
           }
         }
       );
+      
+      if (!response.ok) {
+        // If token is invalid, log out the user
+        if (response.status === 401) {
+          handleLogout();
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error('Failed to fetch questions');
+      }
+      
       const data = await response.json();
       
       if (!data.questions || data.questions.length === 0) {
@@ -138,83 +161,28 @@ function App() {
   const t = translations[gameSettings.language];
 
   if (!user) {
-    const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (!clientId) {
-      return (
-        <Container>
-          <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
-            <Typography variant="h4" color="error" gutterBottom>
-              Configuration Error
-            </Typography>
-            <Typography>
-              Google Client ID is not configured. Please check your environment variables.
-            </Typography>
-          </Box>
-        </Container>
-      );
-    }
-
     return (
-      <GoogleOAuthProvider clientId={clientId}>
-        <Container>
-          <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
-            <Typography variant="h4" gutterBottom>
-              {t?.auth?.welcome || 'Welcome to Trivia Game'}
-            </Typography>
-            <GoogleLogin
-              onSuccess={handleLogin}
-              onError={() => console.log('Login Failed')}
-            />
-          </Box>
-        </Container>
-      </GoogleOAuthProvider>
-    );
-  }
-
-  if (gameState.isGameOver) {
-    return (
-      <Container>
-        <EndGameScreen
-          scores={gameState.scores}
-          onNewGame={handleNewGame}
-          t={t}
-        />
-      </Container>
-    );
-  }
-
-  if (!gameState.isPlaying) {
-    return (
-      <Container>
-        <GameSetup
-          gameSettings={gameSettings}
-          setGameSettings={setGameSettings}
-          gameState={gameState}
-          setGameState={setGameState}
-          onStartGame={startGame}
-          t={t}
-        />
-      </Container>
-    );
-  }
-
-  const currentQuestion = gameState.questions[gameState.currentQuestion];
-
-  return (
-    <Container>
-      <QuestionComponent
-        question={currentQuestion}
-        currentTeam={(gameState.currentQuestion % gameSettings.players) + 1}
-        gameSettings={gameSettings}
-        scores={gameState.scores}
-        onAnswer={handleAnswer}
-        onNextQuestion={handleNextQuestion}
-        questionNumber={gameState.currentQuestion + 1}
-        totalQuestions={gameSettings.questionsPerRound}
+      <AuthWrapper
+        clientId={process.env.GOOGLE_CLIENT_ID}
+        onLogin={handleLogin}
         t={t}
       />
-    </Container>
+    );
+  }
+
+  return (
+    <GameContainer
+      gameState={gameState}
+      gameSettings={gameSettings}
+      setGameSettings={setGameSettings}
+      setGameState={setGameState}
+      onStartGame={startGame}
+      onLogout={handleLogout}
+      handleAnswer={handleAnswer}
+      handleNextQuestion={handleNextQuestion}
+      handleNewGame={handleNewGame}
+      t={t}
+    />
   );
 }
 
