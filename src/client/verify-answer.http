@@ -1,0 +1,23 @@
+POST http://localhost:3000/api/verify-answer
+Authorization: Bearer {{$dotenv TOKEN}}
+content-type: application/json
+
+{
+    "givenAnswer": "gatto",
+    "correctAnswer": "Appartenente alla famiglia dei gatti",
+    "question": "Qual è il significato del termine 'felino'?",
+    "language": "it"
+}
+
+
+###
+POST http://localhost:3000/api/verify-answer
+Authorization: Bearer {{$dotenv TOKEN}}
+content-type: application/json
+
+{
+    "givenAnswer": "la coda",
+    "correctAnswer": "Naso",
+    "question": "Quale organo del corpo del gatto è particolarmente sviluppato per il senso dell'olfatto?",
+    "language": "it"
+}

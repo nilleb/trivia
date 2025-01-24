@@ -38,6 +38,8 @@ function QuestionComponent({
       setShowAnswer(false);
       setTimeLeft(gameSettings.timePerQuestion);
       setActiveTeam(null);
+      setVerificationResult(null);
+      setIsVerifying(false);
       setLastAnswerCorrect(null);
     }
   }, [question, gameSettings.timePerQuestion]);
@@ -68,57 +70,25 @@ function QuestionComponent({
     setActiveTeam(teamNumber);
   };
 
-  const verifyAnswer = async (givenAnswer) => {
-    setIsVerifying(true);
-    try {
-      const response = await fetch('/api/verify-answer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('trivia_token')}`
-        },
-        body: JSON.stringify({
-          givenAnswer,
-          correctAnswer: question.answer,
-          question: question.question,
-          language: gameSettings.language
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to verify answer');
-      }
-
-      const result = await response.json();
-      setVerificationResult(result);
-      return result;
-    } catch (error) {
-      console.error('Error verifying answer:', error);
-      return { isCorrect: givenAnswer === question.answer, explanation: null };
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  const handleTeamAnswer = async (team, givenAnswer) => {
+  const handleTeamAnswer = async (team, givenAnswerIsCorrect, explanation, similarity) => {
     setShowAnswer(true);
-    const result = await verifyAnswer(givenAnswer);
-    setLastAnswerCorrect(result.isCorrect);
+    setLastAnswerCorrect(givenAnswerIsCorrect);
+    console.log(givenAnswerIsCorrect);
+    setVerificationResult({explanation: `${similarity} ${explanation}`});
     // Cache questions are worth 5 points
-    onAnswer(team, result.isCorrect, 5);
+    onAnswer(team, givenAnswerIsCorrect, 5);
   };
 
   const handleCarréAnswer = async (answer) => {
     setShowAnswer(true);
-    const result = await verifyAnswer(answer);
-    setLastAnswerCorrect(result.isCorrect);
     // Use the team that buzzed in, not the turn-based team
     const teamThatAnswered = activeTeam || currentTeam;
+    const isCorrect = question.answer === answer;
+    setLastAnswerCorrect(isCorrect);
     // Carré questions are worth 1 point
-    onAnswer(`team${teamThatAnswered}`, result.isCorrect, 1);
+    onAnswer(`team${teamThatAnswered}`, isCorrect, 1);
   };
 
-  const allTeamsReady = readyTeams.size === gameSettings.players;
 
   if (!question) {
     return (
@@ -197,12 +167,13 @@ function QuestionComponent({
 
       {!showAnswer && answerType === 'cache' && (
         <CacheQuestion
+          question={question.question}
           answer={question.answer}
           gameSettings={gameSettings}
           readyTeams={readyTeams}
           onTeamReady={handleTeamReady}
           onAnswer={handleTeamAnswer}
-          allTeamsReady={allTeamsReady}
+          setIsVerifying={setIsVerifying}
           t={t}
         />
       )}

@@ -38,7 +38,8 @@ export const translations = {
       finalScores: 'Final Scores',
       newGame: 'New Game',
       noQuestions: 'No questions received',
-      loadError: 'Error loading questions'
+      loadError: 'Error loading questions',
+      errorOnVerify: 'Error on verify'
     }
   },
   fr: {
@@ -80,7 +81,8 @@ export const translations = {
       finalScores: 'Scores Finaux',
       newGame: 'Nouvelle Partie',
       noQuestions: 'Aucune question reçue',
-      loadError: 'Erreur lors du chargement des questions'
+      loadError: 'Erreur lors du chargement des questions',
+      errorOnVerify: 'Erreur lors de la vérification'
     }
   },
   it: {
@@ -122,7 +124,8 @@ export const translations = {
       finalScores: 'Punteggi Finali',
       newGame: 'Nuova Partita',
       noQuestions: 'Nessuna domanda ricevuta',
-      loadError: 'Errore nel caricamento delle domande'
+      loadError: 'Errore nel caricamento delle domande',
+      errorOnVerify: 'Errore nella verifica'
     }
   }
 }; 

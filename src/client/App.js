@@ -4,6 +4,7 @@ import AuthWrapper from './components/AuthWrapper';
 import GameContainer from './components/GameContainer';
 
 function App() {
+  const SESSION_EXPIRED = 'Session expired. Please log in again.';
   const [gameSettings, setGameSettings] = useState({
     players: 2,
     language: 'it',
@@ -102,12 +103,11 @@ function App() {
           }
         }
       );
-      
       if (!response.ok) {
         // If token is invalid, log out the user
         if (response.status === 401) {
           handleLogout();
-          throw new Error('Session expired. Please log in again.');
+          throw new Error(SESSION_EXPIRED);
         }
         throw new Error('Failed to fetch questions');
       }
@@ -124,11 +124,13 @@ function App() {
       }));
     } catch (error) {
       console.error('Errore:', error);
-      setGameState(prev => ({
-        ...prev,
-        isPlaying: false,
-        error: error.message || translations[gameSettings.language].game.loadError
-      }));
+      if (error.message !== SESSION_EXPIRED) {
+        setGameState(prev => ({
+          ...prev,
+          isPlaying: false,
+          error: error.message || translations[gameSettings.language].game.loadError
+        }));
+      }
     }
   };
 

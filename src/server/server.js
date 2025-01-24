@@ -30,11 +30,11 @@ const authenticateToken = async (req, res, next) => {
     });
 
     const payload = ticket.getPayload();
-    
+
     // Check if user's email is in the allowed list
     if (allowedEmails.length > 0 && !allowedEmails.includes(payload.email)) {
       console.log(`Unauthorized access attempt from email: ${payload.email}`);
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Access denied',
         message: 'Your email is not authorized to access this application'
       });
@@ -102,22 +102,27 @@ const STRUCTURED_OUTPUT_SCHEMA = {
 }
 
 const ANSWER_VERIFICATION_SCHEMA = {
-  "type": "object",
-  "properties": {
-    "isCorrect": {
-      "type": "boolean",
-      "description": "Whether the given answer is correct or not"
+  "name": "answer_verification_schema",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "isCorrect": {
+        "type": "boolean",
+        "description": "Whether the given answer is correct or not"
+      },
+      "explanation": {
+        "type": "string",
+        "description": "Explanation of why the answer is correct or incorrect"
+      },
+      "similarity": {
+        "type": "number",
+        "description": "A score from 0 to 1 indicating how close the given answer is to the correct answer"
+      }
     },
-    "explanation": {
-      "type": "string",
-      "description": "Explanation of why the answer is correct or incorrect"
-    },
-    "similarity": {
-      "type": "number",
-      "description": "A score from 0 to 1 indicating how close the given answer is to the correct answer"
-    }
+    "required": ["isCorrect", "explanation", "similarity"],
+    "additionalProperties": false
   },
-  "required": ["isCorrect", "explanation", "similarity"]
+  "strict": true
 };
 
 // Improved logs directory handling
@@ -147,7 +152,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
   const theme = req.query.theme;
   const language = req.query.language || 'it';
   const difficulty = req.query.difficulty || 'medio';
-  
+
   // Language-specific prompts
   const prompts = {
     it: `Genera 10 domande quiz sul tema "${theme}" con difficoltà ${difficulty}. 
@@ -174,7 +179,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
   };
 
   const prompt = `${prompts[language]}`;
-  
+
   // In development, try to load from logs first
   if (process.env.NODE_ENV === 'development') {
     try {
@@ -204,7 +209,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
       temperature: 0.3,
       response_format: {
         type: "json_schema",
-        json_schema:STRUCTURED_OUTPUT_SCHEMA,
+        json_schema: STRUCTURED_OUTPUT_SCHEMA,
       },
     });
 
@@ -234,7 +239,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
           settings: { theme, language, difficulty, numberOfQuestions: 10 },
           timestamp: new Date().toISOString()
         };
-        
+
         await fsPromises.writeFile(logFile, JSON.stringify(logData, null, 2));
         console.log(`Log file written successfully: ${logFile}`);
       } catch (logError) {
@@ -245,7 +250,7 @@ app.get('/api/questions', authenticateToken, async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Error generating questions:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Error generating questions',
       details: error.toString()
     });
@@ -257,7 +262,11 @@ app.post('/api/verify-answer', authenticateToken, async (req, res) => {
   try {
     const { givenAnswer, correctAnswer, question, language = 'it' } = req.body;
 
-    if (!givenAnswer || !correctAnswer || !question) {
+    // Convert answers to strings and check if they exist
+    const givenAnswerStr = givenAnswer !== undefined ? String(givenAnswer) : undefined;
+    const correctAnswerStr = correctAnswer !== undefined ? String(correctAnswer) : undefined;
+
+    if (!givenAnswerStr || !correctAnswerStr || !question) {
       return res.status(400).json({
         error: 'Missing required fields',
         details: 'givenAnswer, correctAnswer, and question are required'
@@ -265,31 +274,33 @@ app.post('/api/verify-answer', authenticateToken, async (req, res) => {
     }
 
     const prompts = {
-      it: `Valuta se la risposta data "${givenAnswer}" è corretta per la domanda "${question}". 
-          La risposta corretta è "${correctAnswer}".
+      it: `Valuta se la risposta data "${givenAnswerStr}" è corretta per la domanda "${question}". 
+          La risposta corretta è "${correctAnswerStr}".
           Considera sinonimi, errori di battitura minori e variazioni nella formulazione.
           Fornisci una spiegazione dettagliata del perché la risposta è corretta o sbagliata.`,
-      en: `Evaluate if the given answer "${givenAnswer}" is correct for the question "${question}". 
-          The correct answer is "${correctAnswer}".
+      en: `Evaluate if the given answer "${givenAnswerStr}" is correct for the question "${question}". 
+          The correct answer is "${correctAnswerStr}".
           Consider synonyms, minor typos, and variations in phrasing.
           Provide a detailed explanation of why the answer is correct or incorrect.`,
-      fr: `Évaluez si la réponse donnée "${givenAnswer}" est correcte pour la question "${question}". 
-          La bonne réponse est "${correctAnswer}".
+      fr: `Évaluez si la réponse donnée "${givenAnswerStr}" est correcte pour la question "${question}". 
+          La bonne réponse est "${correctAnswerStr}".
           Tenez compte des synonymes, des fautes de frappe mineures et des variations dans la formulation.
           Fournissez une explication détaillée de la raison pour laquelle la réponse est correcte ou incorrecte.`
     };
 
     const prompt = prompts[language] || prompts.en;
 
-    const completion = await openai.chat.completions.create({
+    const payload = {
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-4",
+      model: "gpt-4o-mini-2024-07-18",
       temperature: 0.3,
       response_format: {
         type: "json_schema",
-        schema: ANSWER_VERIFICATION_SCHEMA,
+        json_schema: ANSWER_VERIFICATION_SCHEMA,
       },
-    });
+    }
+    console.log(payload);
+    const completion = await openai.chat.completions.create(payload);
 
     const result = JSON.parse(completion.choices[0].message.content);
     res.json(result);

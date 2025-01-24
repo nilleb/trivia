@@ -6,12 +6,13 @@ import TeamReadyButtons from './TeamReadyButtons';
 const TEAM_COLORS = ['#2196f3', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#795548'];
 
 function CacheQuestion({ 
+  question,
   answer,
   gameSettings,
   readyTeams,
   onTeamReady,
   onAnswer,
-  allTeamsReady,
+  setIsVerifying,
   t
 }) {
   const [proposedAnswer, setProposedAnswer] = useState('');
@@ -19,11 +20,48 @@ function CacheQuestion({
   const [isCorrect, setIsCorrect] = useState(false);
   const buzzedTeam = Array.from(readyTeams)[0]; // Get the first (and only) team that buzzed
 
-  const handleSubmit = () => {
-    const correct = proposedAnswer.toLowerCase().trim() === answer.toLowerCase().trim();
+  const verifyAnswer = async (givenAnswer) => {
+    console.log(givenAnswer, answer);
+    const isCorrect = givenAnswer.toLowerCase().trim() === answer.toLowerCase().trim();
+    if (isCorrect) {
+      return {isCorrect, explanation: t.game.correctAnswer, similarity: 1};
+    }
+    setIsVerifying(true);
+    try {
+      const response = await fetch('/api/verify-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('trivia_token')}`
+        },
+        body: JSON.stringify({
+          givenAnswer,
+          correctAnswer: answer,
+          question,
+          language: gameSettings.language
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify answer');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Error verifying answer:', error);
+      return { isCorrect: givenAnswer === answer, explanation: t.game.errorOnVerify };
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const result = await verifyAnswer(proposedAnswer);
+    const correct = result.isCorrect;
     setIsCorrect(correct);
     setHasAnswered(true);
-    onAnswer(`team${buzzedTeam}`, correct);
+    onAnswer(`team${buzzedTeam}`, result.isCorrect, result.explanation, result.similarity);
   };
 
   if (!readyTeams.size) {
